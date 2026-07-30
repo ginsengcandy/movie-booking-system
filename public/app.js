@@ -92,6 +92,18 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function formatTime(value) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeStyle: 'short'
+  }).format(new Date(value));
+}
+
+function formatShowtimeRange(showtime) {
+  const startsAt = new Date(showtime.starts_at);
+  const endsAt = new Date(startsAt.getTime() + showtime.duration_minutes * 60 * 1000);
+  return `${formatDate(startsAt)} ~ ${formatTime(endsAt)}`;
+}
+
 async function loadMovies() {
   const data = await api('/movies');
   state.movies = data.movies;
@@ -136,7 +148,7 @@ function renderShowtimes() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `choice ${state.selectedShowtime?.id === showtime.id ? 'active' : ''}`;
-    button.innerHTML = `${formatDate(showtime.starts_at)}<span>${showtime.auditorium} · 좌석 ${showtime.seat_count}개</span>`;
+    button.innerHTML = `${formatShowtimeRange(showtime)}<span>${showtime.auditorium} · 좌석 ${showtime.seat_count}개</span>`;
     button.addEventListener('click', () => selectShowtime(showtime));
     els.showtimeList.append(button);
   }
@@ -145,7 +157,7 @@ function renderShowtimes() {
 async function selectShowtime(showtime) {
   state.selectedShowtime = showtime;
   state.selectedSeat = '';
-  els.selectedShowtimeText.textContent = `${formatDate(showtime.starts_at)} · ${showtime.auditorium}`;
+  els.selectedShowtimeText.textContent = `${formatShowtimeRange(showtime)} · ${showtime.auditorium}`;
   renderShowtimes();
   await loadSeats();
 }

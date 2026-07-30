@@ -54,12 +54,16 @@ class FakeDb {
     if (sql.includes('COUNT(se.id)::int AS seat_count')) {
       const rows = this.showtimes
         .filter((showtime) => showtime.movie_id === params[0])
-        .map((showtime) => ({
-          id: showtime.id,
-          starts_at: showtime.starts_at,
-          auditorium: showtime.auditorium,
-          seat_count: this.seats.filter((seat) => seat.showtime_id === showtime.id).length
-        }));
+        .map((showtime) => {
+          const movie = this.movies.find((item) => item.id === showtime.movie_id);
+          return {
+            id: showtime.id,
+            starts_at: showtime.starts_at,
+            auditorium: showtime.auditorium,
+            duration_minutes: movie.duration_minutes,
+            seat_count: this.seats.filter((seat) => seat.showtime_id === showtime.id).length
+          };
+        });
       return { rows, rowCount: rows.length };
     }
 
@@ -169,6 +173,7 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
 
   const showtimes = await request(app).get('/movies/1/showtimes').expect(200);
   assert.equal(showtimes.body.showtimes[0].seat_count, 2);
+  assert.equal(showtimes.body.showtimes[0].duration_minutes, 100);
 
   await request(app).post('/bookings').send({ showtimeId: 1, seatCode: 'A1' }).expect(401);
 
