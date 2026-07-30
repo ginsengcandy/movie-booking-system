@@ -1,0 +1,279 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f7f5;
+  --panel: #ffffff;
+  --ink: #17201b;
+  --muted: #66736b;
+  --line: #dfe7e1;
+  --accent: #13795b;
+  --accent-dark: #0d5f47;
+  --danger: #b42318;
+  --sold: #c9d2cc;
+  --focus: #f5b84b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Arial, "Noto Sans KR", sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  min-height: 42px;
+  padding: 0 14px;
+  font-weight: 700;
+}
+
+button:hover {
+  background: var(--accent-dark);
+}
+
+button:disabled {
+  background: var(--sold);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.ghost {
+  background: #edf4f0;
+  color: var(--accent-dark);
+}
+
+.ghost:hover {
+  background: #dcebe4;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 28px;
+}
+
+h2 {
+  font-size: 18px;
+}
+
+.topbar p,
+.muted {
+  color: var(--muted);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  background: #edf4f0;
+  color: var(--muted);
+}
+
+.tab.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-height: 42px;
+  padding: 0 12px;
+  color: var(--ink);
+}
+
+input:focus,
+button:focus {
+  outline: 3px solid rgba(245, 184, 75, 0.35);
+  outline-offset: 2px;
+}
+
+.movie-list,
+.showtime-list,
+.booking-list {
+  display: grid;
+  gap: 10px;
+}
+
+.choice {
+  width: 100%;
+  min-height: 64px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  font-weight: 700;
+}
+
+.choice:hover,
+.choice.active {
+  border-color: var(--accent);
+  background: #eef8f3;
+  color: var(--ink);
+}
+
+.choice span,
+.booking-item span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.screen {
+  height: 32px;
+  border-radius: 6px;
+  background: #17201b;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(48px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.seat {
+  min-height: 48px;
+  background: #e8f3ee;
+  color: var(--accent-dark);
+}
+
+.seat.selected {
+  background: var(--focus);
+  color: #2c2108;
+}
+
+.seat.booked {
+  background: var(--sold);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.booking-panel {
+  min-height: 260px;
+}
+
+.booking-item {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: min(360px, calc(100% - 40px));
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  padding: 14px 16px;
+  box-shadow: 0 12px 28px rgba(23, 32, 27, 0.18);
+}
+
+.toast.error {
+  background: var(--danger);
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .layout,
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
