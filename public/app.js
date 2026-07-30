@@ -204,8 +204,28 @@ function renderBookings(bookings) {
   for (const booking of bookings) {
     const item = document.createElement('div');
     item.className = 'booking-item';
-    item.innerHTML = `${booking.movie_title}<span>${formatDate(booking.starts_at)} · ${booking.auditorium} · ${booking.seat_code}</span>`;
+    const details = document.createElement('div');
+    details.innerHTML = `${booking.movie_title}<span>${formatDate(booking.starts_at)} · ${booking.auditorium} · ${booking.seat_code}</span>`;
+
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'danger';
+    cancelButton.textContent = '예매 취소';
+    cancelButton.addEventListener('click', () => cancelBooking(booking.id));
+
+    item.append(details, cancelButton);
     els.bookingList.append(item);
+  }
+}
+
+async function cancelBooking(bookingId) {
+  try {
+    await api(`/bookings/${bookingId}`, { method: 'DELETE' });
+    toast('예매를 취소했습니다.');
+    await loadBookings();
+    if (state.selectedShowtime) await loadSeats();
+  } catch (error) {
+    toast(error.message, 'error');
   }
 }
 

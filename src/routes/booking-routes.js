@@ -16,5 +16,10 @@ export function bookingRoutes(bookingService) {
     res.json({ bookings: await bookingService.listBookings(req.user.id) });
   }));
 
+  router.delete('/:bookingId', asyncHandler(async (req, res) => {
+    await bookingService.cancelBooking(req.user.id, req.params.bookingId);
+    res.status(204).send();
+  }));
+
   return router;
 }

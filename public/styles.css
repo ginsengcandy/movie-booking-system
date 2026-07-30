@@ -49,6 +49,14 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.danger {
+  background: var(--danger);
+}
+
+.danger:hover {
+  background: #8f1c14;
+}
+
 .ghost {
   background: #edf4f0;
   color: var(--accent-dark);
@@ -241,9 +249,20 @@ button:focus {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 12px;
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 4px;
   font-weight: 700;
+}
+
+.booking-item div {
+  display: grid;
+  gap: 4px;
+}
+
+.booking-item button {
+  flex: 0 0 auto;
 }
 
 .toast {

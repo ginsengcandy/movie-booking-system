@@ -1,6 +1,6 @@
 # 영화 티켓 예매 시스템
 
-Node.js와 PostgreSQL로 구현한 영화 티켓 예매 시스템입니다. 회원가입/로그인, 영화 및 상영 시간 조회, 좌석 예매, 내 예매 내역 조회 API를 제공하며, 같은 서버에서 정적 프론트엔드를 함께 서빙해 브라우저에서 전체 흐름을 확인할 수 있습니다.
+Node.js와 PostgreSQL로 구현한 영화 티켓 예매 시스템입니다. 회원가입/로그인, 영화 및 상영 시간 조회, 좌석 예매, 내 예매 내역 조회/취소 API를 제공하며, 같은 서버에서 정적 프론트엔드를 함께 서빙해 브라우저에서 전체 흐름을 확인할 수 있습니다.
 
 ## 1. 실행 방법
 
@@ -64,6 +64,7 @@ npm start
 4. 예매 가능한 좌석 선택
 5. `선택 좌석 예매` 클릭
 6. `내 예매` 영역에서 예매 내역 확인
+7. `예매 취소` 클릭 후 좌석 상태와 내 예매 내역 갱신 확인
 
 ### 테스트 실행
 
@@ -148,6 +149,7 @@ npm test
 - `public/app.js`는 REST API를 호출하고 JWT를 `localStorage`에 저장해 로그인 상태를 유지합니다.
 - 좌석 화면은 `GET /movies/showtimes/:showtimeId/seats` 응답을 기준으로 이미 예매된 좌석을 비활성화합니다.
 - 예매 성공 또는 실패 후 좌석 상태와 내 예매 내역을 다시 조회해 화면과 데이터베이스 상태가 어긋나지 않도록 했습니다.
+- 예매 취소 성공 후에도 좌석 상태와 내 예매 내역을 다시 조회해 취소된 좌석이 즉시 다시 선택 가능하도록 했습니다.
 
 ## API 사용 예시
 
@@ -198,6 +200,13 @@ curl -X POST http://localhost:3000/bookings \
 
 ```bash
 curl http://localhost:3000/bookings/me \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### 내 예매 취소
+
+```bash
+curl -X DELETE http://localhost:3000/bookings/1 \
   -H "Authorization: Bearer <TOKEN>"
 ```
 

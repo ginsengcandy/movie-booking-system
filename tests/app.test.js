@@ -88,6 +88,16 @@ class FakeDb {
       return { rows, rowCount: rows.length };
     }
 
+    if (sql.includes('DELETE FROM bookings')) {
+      const index = this.bookings.findIndex(
+        (booking) => booking.id === params[0] && booking.user_id === params[1]
+      );
+      if (index === -1) return { rows: [], rowCount: 0 };
+
+      const [booking] = this.bookings.splice(index, 1);
+      return { rows: [{ id: booking.id }], rowCount: 1 };
+    }
+
     throw new Error(`Unhandled query: ${sql}`);
   }
 
@@ -190,10 +200,31 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
     .send({ showtimeId: 1, seatCode: 'A1' })
     .expect(409);
 
+  const otherRegister = await request(app)
+    .post('/auth/register')
+    .send({ email: 'other@example.com', password: 'password123', name: 'Other' })
+    .expect(201);
+
+  await request(app)
+    .delete(`/bookings/${booking.body.booking.id}`)
+    .set('Authorization', `Bearer ${otherRegister.body.token}`)
+    .expect(404);
+
   const myBookings = await request(app)
     .get('/bookings/me')
     .set('Authorization', `Bearer ${token}`)
     .expect(200);
   assert.equal(myBookings.body.bookings[0].movie_title, 'Test Movie');
   assert.equal(myBookings.body.bookings[0].seat_code, 'A1');
+
+  await request(app)
+    .delete(`/bookings/${booking.body.booking.id}`)
+    .set('Authorization', `Bearer ${token}`)
+    .expect(204);
+
+  const cancelledBookings = await request(app)
+    .get('/bookings/me')
+    .set('Authorization', `Bearer ${token}`)
+    .expect(200);
+  assert.equal(cancelledBookings.body.bookings.length, 0);
 });

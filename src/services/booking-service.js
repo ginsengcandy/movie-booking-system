@@ -6,6 +6,8 @@ const bookingSchema = z.object({
   seatCode: z.string().trim().min(2).max(10)
 });
 
+const bookingIdSchema = z.coerce.number().int().positive();
+
 export function createBookingService(db) {
   return {
     async createBooking(userId, input) {
@@ -70,6 +72,20 @@ export function createBookingService(db) {
         [userId]
       );
       return result.rows;
+    },
+
+    async cancelBooking(userId, bookingId) {
+      const parsed = bookingIdSchema.safeParse(bookingId);
+      if (!parsed.success) throw badRequest('Invalid booking id');
+
+      const result = await db.query(
+        `DELETE FROM bookings
+         WHERE id = $1 AND user_id = $2
+         RETURNING id`,
+        [parsed.data, userId]
+      );
+
+      if (result.rowCount === 0) throw notFound('Booking not found');
     }
   };
 }
