@@ -79,6 +79,18 @@
 
       <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     </main>
+
+    <div id="cancelModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cancelModalTitle">
+      <div class="modal-panel">
+        <h2 id="cancelModalTitle">예매를 취소할까요?</h2>
+        <p id="cancelModalText" class="muted"></p>
+        <div class="modal-actions">
+          <button id="cancelModalCloseButton" class="ghost" type="button">아니요</button>
+          <button id="cancelModalConfirmButton" class="danger" type="button">예매 취소</button>
+        </div>
+      </div>
+    </div>
+
     <script src="/app.js" defer></script>
   </body>
 </html>

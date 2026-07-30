@@ -6,7 +6,8 @@ const state = {
   showtimes: [],
   selectedMovie: null,
   selectedShowtime: null,
-  selectedSeat: ''
+  selectedSeat: '',
+  pendingCancelBooking: null
 };
 
 const els = {
@@ -28,6 +29,10 @@ const els = {
   bookButton: document.querySelector('#bookButton'),
   bookingRefreshButton: document.querySelector('#bookingRefreshButton'),
   bookingList: document.querySelector('#bookingList'),
+  cancelModal: document.querySelector('#cancelModal'),
+  cancelModalText: document.querySelector('#cancelModalText'),
+  cancelModalCloseButton: document.querySelector('#cancelModalCloseButton'),
+  cancelModalConfirmButton: document.querySelector('#cancelModalConfirmButton'),
   toast: document.querySelector('#toast')
 };
 
@@ -102,6 +107,10 @@ function formatShowtimeRange(showtime) {
   const startsAt = new Date(showtime.starts_at);
   const endsAt = new Date(startsAt.getTime() + showtime.duration_minutes * 60 * 1000);
   return `${formatDate(startsAt)} ~ ${formatTime(endsAt)}`;
+}
+
+function formatBookingSummary(booking) {
+  return `${booking.movie_title} · ${formatDate(booking.starts_at)} · ${booking.auditorium} · ${booking.seat_code}`;
 }
 
 async function loadMovies() {
@@ -211,16 +220,32 @@ function renderBookings(bookings) {
     cancelButton.type = 'button';
     cancelButton.className = 'danger';
     cancelButton.textContent = '예매 취소';
-    cancelButton.addEventListener('click', () => cancelBooking(booking.id));
+    cancelButton.addEventListener('click', () => openCancelModal(booking));
 
     item.append(details, cancelButton);
     els.bookingList.append(item);
   }
 }
 
-async function cancelBooking(bookingId) {
+function openCancelModal(booking) {
+  state.pendingCancelBooking = booking;
+  els.cancelModalText.textContent = `${formatBookingSummary(booking)} 예매가 취소됩니다.`;
+  els.cancelModal.classList.remove('hidden');
+  els.cancelModalConfirmButton.focus();
+}
+
+function closeCancelModal() {
+  state.pendingCancelBooking = null;
+  els.cancelModal.classList.add('hidden');
+}
+
+async function cancelBooking() {
+  if (!state.pendingCancelBooking) return;
+  const bookingId = state.pendingCancelBooking.id;
+
   try {
     await api(`/bookings/${bookingId}`, { method: 'DELETE' });
+    closeCancelModal();
     toast('예매를 취소했습니다.');
     await loadBookings();
     if (state.selectedShowtime) await loadSeats();
@@ -262,6 +287,11 @@ els.authForm.addEventListener('submit', async (event) => {
 
 els.refreshButton.addEventListener('click', () => loadMovies().catch((error) => toast(error.message, 'error')));
 els.bookingRefreshButton.addEventListener('click', () => loadBookings().catch((error) => toast(error.message, 'error')));
+els.cancelModalCloseButton.addEventListener('click', closeCancelModal);
+els.cancelModalConfirmButton.addEventListener('click', cancelBooking);
+els.cancelModal.addEventListener('click', (event) => {
+  if (event.target === els.cancelModal) closeCancelModal();
+});
 
 els.bookButton.addEventListener('click', async () => {
   if (!state.selectedShowtime || !state.selectedSeat) return;
