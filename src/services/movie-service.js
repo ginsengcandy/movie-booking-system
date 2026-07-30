@@ -17,11 +17,16 @@ export function createMovieService(db) {
       if (movie.rowCount === 0) throw notFound('Movie not found');
 
       const result = await db.query(
-        `SELECT s.id, s.starts_at, s.auditorium, COUNT(se.id)::int AS seat_count
+        `SELECT s.id,
+                s.starts_at,
+                s.auditorium,
+                m.duration_minutes,
+                COUNT(se.id)::int AS seat_count
          FROM showtimes s
+         JOIN movies m ON m.id = s.movie_id
          JOIN seats se ON se.showtime_id = s.id
          WHERE s.movie_id = $1
-         GROUP BY s.id
+         GROUP BY s.id, m.duration_minutes
          ORDER BY s.starts_at`,
         [movieId]
       );
