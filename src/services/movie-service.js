@@ -21,10 +21,13 @@ export function createMovieService(db) {
                 s.starts_at,
                 s.auditorium,
                 m.duration_minutes,
-                COUNT(se.id)::int AS seat_count
+                COUNT(se.id)::int AS seat_count,
+                COUNT(b.id)::int AS booked_seat_count,
+                (COUNT(se.id) - COUNT(b.id))::int AS remaining_seat_count
          FROM showtimes s
          JOIN movies m ON m.id = s.movie_id
          JOIN seats se ON se.showtime_id = s.id
+         LEFT JOIN bookings b ON b.seat_id = se.id AND b.showtime_id = s.id
          WHERE s.movie_id = $1
          GROUP BY s.id, m.duration_minutes
          ORDER BY s.starts_at`,

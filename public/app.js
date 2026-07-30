@@ -113,6 +113,10 @@ function formatBookingSummary(booking) {
   return `${booking.movie_title} · ${formatDate(booking.starts_at)} · ${booking.auditorium} · ${booking.seat_code}`;
 }
 
+function formatSeatAvailability(showtime) {
+  return `잔여석 ${showtime.remaining_seat_count}/${showtime.seat_count}`;
+}
+
 async function loadMovies() {
   const data = await api('/movies');
   state.movies = data.movies;
@@ -151,13 +155,26 @@ async function selectMovie(movie) {
   renderShowtimes();
 }
 
+async function refreshShowtimes() {
+  if (!state.selectedMovie) return;
+
+  const data = await api(`/movies/${state.selectedMovie.id}/showtimes`);
+  state.showtimes = data.showtimes;
+  if (state.selectedShowtime) {
+    state.selectedShowtime = state.showtimes.find(
+      (showtime) => showtime.id === state.selectedShowtime.id
+    ) || null;
+  }
+  renderShowtimes();
+}
+
 function renderShowtimes() {
   els.showtimeList.innerHTML = '';
   for (const showtime of state.showtimes) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `choice ${state.selectedShowtime?.id === showtime.id ? 'active' : ''}`;
-    button.innerHTML = `${formatShowtimeRange(showtime)}<span>${showtime.auditorium} · 좌석 ${showtime.seat_count}개</span>`;
+    button.innerHTML = `${formatShowtimeRange(showtime)}<span>${showtime.auditorium} · ${formatSeatAvailability(showtime)}</span>`;
     button.addEventListener('click', () => selectShowtime(showtime));
     els.showtimeList.append(button);
   }
@@ -248,6 +265,7 @@ async function cancelBooking() {
     closeCancelModal();
     toast('예매를 취소했습니다.');
     await loadBookings();
+    await refreshShowtimes();
     if (state.selectedShowtime) await loadSeats();
   } catch (error) {
     toast(error.message, 'error');
@@ -307,6 +325,7 @@ els.bookButton.addEventListener('click', async () => {
     state.selectedSeat = '';
     await loadSeats();
     await loadBookings();
+    await refreshShowtimes();
   } catch (error) {
     toast(error.message, 'error');
     await loadSeats();

@@ -61,7 +61,12 @@ class FakeDb {
             starts_at: showtime.starts_at,
             auditorium: showtime.auditorium,
             duration_minutes: movie.duration_minutes,
-            seat_count: this.seats.filter((seat) => seat.showtime_id === showtime.id).length
+            seat_count: this.seats.filter((seat) => seat.showtime_id === showtime.id).length,
+            booked_seat_count: this.bookings.filter(
+              (booking) => booking.showtime_id === showtime.id
+            ).length,
+            remaining_seat_count: this.seats.filter((seat) => seat.showtime_id === showtime.id)
+              .length - this.bookings.filter((booking) => booking.showtime_id === showtime.id).length
           };
         });
       return { rows, rowCount: rows.length };
@@ -184,6 +189,8 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
   const showtimes = await request(app).get('/movies/1/showtimes').expect(200);
   assert.equal(showtimes.body.showtimes[0].seat_count, 2);
   assert.equal(showtimes.body.showtimes[0].duration_minutes, 100);
+  assert.equal(showtimes.body.showtimes[0].booked_seat_count, 0);
+  assert.equal(showtimes.body.showtimes[0].remaining_seat_count, 2);
 
   await request(app).post('/bookings').send({ showtimeId: 1, seatCode: 'A1' }).expect(401);
 
@@ -193,6 +200,10 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
     .send({ showtimeId: 1, seatCode: 'A1' })
     .expect(201);
   assert.equal(booking.body.booking.showtime_id, 1);
+
+  const showtimesAfterBooking = await request(app).get('/movies/1/showtimes').expect(200);
+  assert.equal(showtimesAfterBooking.body.showtimes[0].booked_seat_count, 1);
+  assert.equal(showtimesAfterBooking.body.showtimes[0].remaining_seat_count, 1);
 
   await request(app)
     .post('/bookings')
@@ -227,4 +238,8 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
     .set('Authorization', `Bearer ${token}`)
     .expect(200);
   assert.equal(cancelledBookings.body.bookings.length, 0);
+
+  const showtimesAfterCancel = await request(app).get('/movies/1/showtimes').expect(200);
+  assert.equal(showtimesAfterCancel.body.showtimes[0].booked_seat_count, 0);
+  assert.equal(showtimesAfterCancel.body.showtimes[0].remaining_seat_count, 2);
 });
