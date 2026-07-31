@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -38,8 +38,8 @@ test(
     const { Pool } = pg;
     const pool = new Pool({ connectionString: testDatabaseUrl });
     const app = createApp(pool);
-    const migrationPath = join(__dirname, '..', '..', 'migrations', '001_init.sql');
-    const migrationSql = await readFile(migrationPath, 'utf8');
+    const migrationsDir = join(__dirname, '..', '..', 'migrations');
+    const migrationFiles = (await readdir(migrationsDir)).filter((file) => file.endsWith('.sql')).sort();
     const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const createdIds = {
       users: [],
@@ -63,7 +63,10 @@ test(
       }
     });
 
-    await pool.query(migrationSql);
+    for (const file of migrationFiles) {
+      const migrationSql = await readFile(join(migrationsDir, file), 'utf8');
+      await pool.query(migrationSql);
+    }
 
     const movieResult = await pool.query(
       `INSERT INTO movies (title, description, duration_minutes)
@@ -139,7 +142,8 @@ test(
       `SELECT COUNT(*)::int AS count
        FROM bookings
        WHERE showtime_id = $1
-         AND seat_id = $2`,
+         AND seat_id = $2
+         AND status = 'CONFIRMED'`,
       [createdIds.showtime, createdIds.seat]
     );
 

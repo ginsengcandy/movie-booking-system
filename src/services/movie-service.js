@@ -27,7 +27,9 @@ export function createMovieService(db) {
          FROM showtimes s
          JOIN movies m ON m.id = s.movie_id
          JOIN seats se ON se.showtime_id = s.id
-         LEFT JOIN bookings b ON b.seat_id = se.id AND b.showtime_id = s.id
+         LEFT JOIN bookings b ON b.seat_id = se.id
+          AND b.showtime_id = s.id
+          AND b.status = 'CONFIRMED'
          WHERE s.movie_id = $1
          GROUP BY s.id, m.duration_minutes
          ORDER BY s.starts_at`,
@@ -44,7 +46,9 @@ export function createMovieService(db) {
         `SELECT se.code,
                 CASE WHEN b.id IS NULL THEN false ELSE true END AS booked
          FROM seats se
-         LEFT JOIN bookings b ON b.seat_id = se.id AND b.showtime_id = se.showtime_id
+         LEFT JOIN bookings b ON b.seat_id = se.id
+          AND b.showtime_id = se.showtime_id
+          AND b.status = 'CONFIRMED'
          WHERE se.showtime_id = $1
          ORDER BY se.code`,
         [showtimeId]

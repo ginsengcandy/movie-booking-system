@@ -245,6 +245,7 @@ export const openApiSpec = {
       delete: {
         tags: ['Bookings'],
         summary: 'Cancel my booking',
+        description: 'Marks a confirmed booking as CANCELLED. The booking row is kept for history.',
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -425,13 +426,32 @@ export const openApiSpec = {
       },
       CreatedBooking: {
         type: 'object',
-        required: ['id', 'user_id', 'showtime_id', 'seat_id', 'created_at'],
+        required: [
+          'id',
+          'user_id',
+          'showtime_id',
+          'seat_id',
+          'status',
+          'created_at',
+          'updated_at',
+          'cancelled_at',
+          'version'
+        ],
         properties: {
           id: { type: 'integer', example: 1 },
           user_id: { type: 'integer', example: 1 },
           showtime_id: { type: 'integer', example: 1 },
           seat_id: { type: 'integer', example: 1 },
-          created_at: { type: 'string', format: 'date-time', example: '2026-08-01T10:00:00.000Z' }
+          status: { $ref: '#/components/schemas/BookingStatus' },
+          created_at: { type: 'string', format: 'date-time', example: '2026-08-01T10:00:00.000Z' },
+          updated_at: { type: 'string', format: 'date-time', example: '2026-08-01T10:00:00.000Z' },
+          cancelled_at: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            example: null
+          },
+          version: { type: 'integer', example: 1 }
         }
       },
       Booking: {
@@ -439,6 +459,9 @@ export const openApiSpec = {
         required: [
           'id',
           'created_at',
+          'updated_at',
+          'cancelled_at',
+          'status',
           'movie_id',
           'movie_title',
           'showtime_id',
@@ -449,6 +472,14 @@ export const openApiSpec = {
         properties: {
           id: { type: 'integer', example: 1 },
           created_at: { type: 'string', format: 'date-time', example: '2026-08-01T10:00:00.000Z' },
+          updated_at: { type: 'string', format: 'date-time', example: '2026-08-01T10:00:00.000Z' },
+          cancelled_at: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            example: null
+          },
+          status: { $ref: '#/components/schemas/BookingStatus' },
           movie_id: { type: 'integer', example: 1 },
           movie_title: { type: 'string', example: 'The Matrix' },
           showtime_id: { type: 'integer', example: 1 },
@@ -456,6 +487,11 @@ export const openApiSpec = {
           auditorium: { type: 'string', example: 'A관' },
           seat_code: { type: 'string', example: 'A1' }
         }
+      },
+      BookingStatus: {
+        type: 'string',
+        enum: ['CONFIRMED', 'CANCELLED'],
+        example: 'CONFIRMED'
       },
       ErrorResponse: {
         type: 'object',

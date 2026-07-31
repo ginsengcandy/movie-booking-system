@@ -109,7 +109,7 @@ npm run test:integration
 
 ```text
 .
-├── migrations/001_init.sql      # PostgreSQL 스키마
+├── migrations/                  # PostgreSQL 스키마 및 증분 마이그레이션
 ├── scripts/migrate.js           # 마이그레이션 실행 스크립트
 ├── scripts/seed.js              # 샘플 영화, 상영 회차, 좌석 생성
 ├── src/
@@ -149,18 +149,27 @@ npm run test:integration
 - `movies`: 영화 정보. 샘플 데이터 재실행성을 위해 `title`은 유니크입니다.
 - `showtimes`: 영화별 상영 회차.
 - `seats`: 상영 회차별 좌석. 같은 상영 회차 안에서 좌석 코드는 유니크입니다.
-- `bookings`: 사용자 예매. 사용자, 상영 회차, 좌석 관계를 저장합니다.
+- `bookings`: 사용자 예매. 사용자, 상영 회차, 좌석 관계와 예약 상태를 저장합니다.
 
 좌석은 `A1`, `A2`, `B1` 같은 짧은 코드 문자열로 표현합니다. 샘플 데이터는 각 상영 회차마다 8개 좌석을 생성합니다.
+
+### 예약 상태 모델
+
+예매는 `bookings.status`로 상태를 관리합니다.
+
+- `CONFIRMED`: 확정 예매입니다. 좌석 점유, 잔여석 계산, 내 예매 목록 조회의 기준이 됩니다.
+- `CANCELLED`: 취소된 예매입니다. 이력 추적을 위해 row를 삭제하지 않고 상태만 변경합니다.
+
+예매 취소 시 `DELETE`로 row를 제거하지 않고 `status = 'CANCELLED'`, `cancelled_at = now()`, `updated_at = now()`, `version = version + 1`로 갱신합니다. `GET /bookings/me`는 일반 사용자 화면용 API이므로 `CONFIRMED` 예약만 반환합니다. 취소 이력 조회 API는 별도로 제공하지 않습니다.
 
 ### 좌석 중복 예매 방지 방법
 
 중복 예매는 두 겹으로 차단합니다.
 
 1. 서비스 계층에서 예매 생성 시 트랜잭션을 시작합니다.
-2. `bookings` 테이블에 `UNIQUE (showtime_id, seat_id)` 제약 조건을 둡니다.
+2. `bookings` 테이블에 `status = 'CONFIRMED'` 예약만 대상으로 하는 PostgreSQL partial unique index를 둡니다.
 
-동시에 같은 좌석 예매 요청이 들어와도 PostgreSQL의 유니크 제약 때문에 하나만 성공하고 나머지는 `23505` 오류가 발생합니다. 애플리케이션은 이를 `409 CONFLICT`와 `Seat is already booked` 응답으로 변환합니다.
+동시에 같은 좌석 예매 요청이 들어와도 PostgreSQL의 partial unique index 때문에 확정 예약은 하나만 성공하고 나머지는 `23505` 오류가 발생합니다. 애플리케이션은 이를 `409 CONFLICT`와 `Seat is already booked` 응답으로 변환합니다. 취소된 예약은 좌석 점유로 계산하지 않으므로, `CANCELLED` 상태가 된 좌석은 다시 예매할 수 있습니다.
 
 ### 오류 응답
 
