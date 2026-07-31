@@ -74,7 +74,36 @@ Swagger/OpenAPI 문서는 서버 실행 후 `http://localhost:3000/api-docs`에�
 npm test
 ```
 
-테스트는 빠른 재현성을 위해 인메모리 가짜 DB 어댑터로 API 흐름을 검증합니다. 실제 PostgreSQL 동시성 검증은 `bookings` 테이블의 `UNIQUE (showtime_id, seat_id)` 제약 조건과 트랜잭션을 기준으로 설계되어 있습니다.
+기본 테스트는 빠른 재현성을 위해 인메모리 가짜 DB 어댑터로 API 흐름을 검증합니다. 실제 PostgreSQL 동시성 검증은 별도 통합 테스트로 실행합니다.
+
+PostgreSQL 기반 동시 예매 통합 테스트는 `TEST_DATABASE_URL`이 설정된 경우에만 실행됩니다. 안전을 위해 테스트 데이터베이스 이름에는 `test`가 포함되어야 합니다. `TEST_DATABASE_URL`은 `.env`에 추가하거나 셸 환경 변수로 설정할 수 있습니다.
+
+`.env`에 추가하는 경우:
+
+```bash
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/movie_booking_test
+```
+
+그다음 통합 테스트를 실행합니다.
+
+```bash
+npm run test:integration
+```
+
+셸에서 일회성으로 설정하는 경우:
+
+```bash
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/movie_booking_test npm run test:integration
+```
+
+Windows PowerShell에서는 다음처럼 실행합니다.
+
+```powershell
+$env:TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5432/movie_booking_test"
+npm run test:integration
+```
+
+통합 테스트는 같은 좌석에 여러 사용자가 동시에 예매 요청을 보냈을 때 1건만 성공하고 나머지가 `409 Conflict`로 응답하는지 실제 PostgreSQL 트랜잭션과 유니크 제약 조건 기준으로 검증합니다.
 
 ## 2. 프로젝트 구조 설명
 
@@ -97,7 +126,9 @@ npm test
 │   ├── index.html               # 브라우저 화면 구조
 │   ├── styles.css               # 화면 스타일
 │   └── app.js                   # API 연동 및 화면 상태 관리
-└── tests/app.test.js            # 핵심 기능 자동 테스트
+└── tests/
+    ├── app.test.js              # 핵심 기능 자동 테스트
+    └── integration/             # PostgreSQL 기반 통합 테스트
 ```
 
 ## 3. 설계 의도
