@@ -23,8 +23,8 @@ Node.js와 PostgreSQL로 구현한 영화 티켓 예매 시스템입니다. 회�
 ```bash
 NODE_ENV=development
 PORT=3000
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/movie_booking
-TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/movie_booking_test
+DATABASE_URL=postgres://postgres:postgres@localhost:5433/movie_booking
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5433/movie_booking_test
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=1h
 BCRYPT_ROUNDS=10
