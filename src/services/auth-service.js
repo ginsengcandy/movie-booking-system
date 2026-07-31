@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../config/env.js';
+import { safeRecordAuditLog } from './audit-log-service.js';
 import { badRequest, conflict, unauthorized } from '../utils/errors.js';
 
 const credentialsSchema = z.object({
@@ -40,7 +41,7 @@ export function createAuthService(db) {
       }
     },
 
-    async login(input) {
+    async login(input, requestContext = {}) {
       const parsed = credentialsSchema.omit({ name: true }).safeParse(input);
       if (!parsed.success) throw badRequest('Invalid login input');
 
@@ -51,7 +52,24 @@ export function createAuthService(db) {
       );
       const user = result.rows[0];
       const valid = user ? await bcrypt.compare(password, user.password_hash) : false;
-      if (!valid) throw unauthorized('Invalid email or password');
+      if (!valid) {
+        await safeRecordAuditLog(db, {
+          eventType: 'LOGIN_FAILED',
+          actorUserId: user?.id || null,
+          targetType: 'user',
+          targetId: user?.id || null,
+          action: 'LOGIN',
+          status: 'FAILED',
+          message: 'Invalid credentials',
+          metadata: {
+            email: email.toLowerCase(),
+            reason: user ? 'PASSWORD_MISMATCH' : 'USER_NOT_FOUND'
+          },
+          ipAddress: requestContext.ipAddress,
+          userAgent: requestContext.userAgent
+        });
+        throw unauthorized('Invalid email or password');
+      }
 
       return {
         user: { id: user.id, email: user.email, name: user.name },

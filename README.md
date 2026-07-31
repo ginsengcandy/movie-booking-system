@@ -267,3 +267,46 @@ curl -X DELETE http://localhost:3000/bookings/1 \
 - 프론트엔드는 과제 기능 확인을 위한 정적 HTML/CSS/JavaScript로 구현했습니다. 별도 빌드 도구나 SPA 라우팅은 사용하지 않습니다.
 - 테스트는 API 핵심 흐름을 인메모리 가짜 DB로 검증합니다. 실제 PostgreSQL 환경의 동시 요청 부하 테스트는 별도 도구로 추가할 수 있습니다.
 - 좌석 배치도나 결제 기능은 과제 범위를 벗어나므로 구현하지 않았습니다.
+
+## Audit Log
+
+중요한 사용자 행위와 실패 이벤트는 `audit_logs` 테이블에 기록합니다.
+
+기록 대상 이벤트:
+
+- `BOOKING_CREATED`: 예매 생성 성공
+- `BOOKING_CANCELLED`: 예매 취소 성공
+- `LOGIN_FAILED`: 로그인 실패
+- `DUPLICATE_BOOKING_FAILED`: 중복 예매 실패
+
+주요 필드:
+
+- `event_type`: 이벤트 종류
+- `actor_user_id`: 작업을 수행한 사용자 ID. 사용자를 특정할 수 없으면 `NULL`
+- `target_type`, `target_id`: 변경 또는 시도 대상
+- `action`: `CREATE`, `CANCEL`, `LOGIN`, `BOOK`
+- `status`: `SUCCESS` 또는 `FAILED`
+- `message`: 운영자가 읽을 수 있는 간단한 설명
+- `metadata`: 예매 ID, 상영 회차 ID, 좌석 ID, 실패 사유 등 구조화된 부가 정보
+- `ip_address`, `user_agent`: 요청 컨텍스트
+- `created_at`: 이벤트 발생 시각
+
+예매 생성과 취소 성공 로그는 원본 데이터 변경과 같은 트랜잭션에서 기록합니다. 중복 예매 실패는 서비스 사전 검사와 PostgreSQL unique constraint 충돌 양쪽에서 기록될 수 있도록 처리합니다. 로그인 실패 로그에는 이메일과 실패 사유만 남기며 비밀번호, JWT, password hash 같은 민감 정보는 저장하지 않습니다.
+
+현재 별도 관리자 권한 모델이 없으므로 전체 감사 로그 조회 API는 공개하지 않습니다. 운영 확인은 DB에서 직접 조회합니다.
+
+```sql
+SELECT id,
+       event_type,
+       actor_user_id,
+       target_type,
+       target_id,
+       action,
+       status,
+       message,
+       metadata,
+       created_at
+FROM audit_logs
+ORDER BY created_at DESC
+LIMIT 50;
+```

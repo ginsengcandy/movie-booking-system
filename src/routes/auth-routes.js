@@ -10,7 +10,10 @@ export function authRoutes(authService) {
   }));
 
   router.post('/login', asyncHandler(async (req, res) => {
-    const result = await authService.login(req.body);
+    const result = await authService.login(req.body, {
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
     res.json(result);
   }));
 

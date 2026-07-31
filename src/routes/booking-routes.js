@@ -8,7 +8,10 @@ export function bookingRoutes(bookingService) {
   router.use(requireAuth);
 
   router.post('/', asyncHandler(async (req, res) => {
-    const booking = await bookingService.createBooking(req.user.id, req.body);
+    const booking = await bookingService.createBooking(req.user.id, req.body, {
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
     res.status(201).json({ booking });
   }));
 
@@ -17,7 +20,10 @@ export function bookingRoutes(bookingService) {
   }));
 
   router.delete('/:bookingId', asyncHandler(async (req, res) => {
-    await bookingService.cancelBooking(req.user.id, req.params.bookingId);
+    await bookingService.cancelBooking(req.user.id, req.params.bookingId, {
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
     res.status(204).send();
   }));
 
