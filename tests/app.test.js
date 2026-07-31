@@ -17,9 +17,29 @@ class FakeDb {
       { id: 2, showtime_id: 1, code: 'A2' }
     ];
     this.bookings = [];
+    this.auditLogs = [];
   }
 
   async query(sql, params = []) {
+    if (sql.includes('INSERT INTO audit_logs')) {
+      const log = {
+        id: this.auditLogs.length + 1,
+        event_type: params[0],
+        actor_user_id: params[1],
+        target_type: params[2],
+        target_id: params[3],
+        action: params[4],
+        status: params[5],
+        message: params[6],
+        metadata: JSON.parse(params[7]),
+        ip_address: params[8],
+        user_agent: params[9],
+        created_at: new Date().toISOString()
+      };
+      this.auditLogs.push(log);
+      return { rows: [log], rowCount: 1 };
+    }
+
     if (sql.includes('INSERT INTO users')) {
       if (this.users.some((user) => user.email === params[0])) {
         const error = new Error('duplicate user');
@@ -129,7 +149,7 @@ class FakeDb {
       booking.cancelled_at = new Date().toISOString();
       booking.updated_at = booking.cancelled_at;
       booking.version += 1;
-      return { rows: [{ id: booking.id }], rowCount: 1 };
+      return { rows: [booking], rowCount: 1 };
     }
 
     throw new Error(`Unhandled query: ${sql}`);
@@ -185,6 +205,16 @@ class FakeClient {
       return { rows: [booking], rowCount: 1 };
     }
 
+    if (sql.includes('FROM bookings') && sql.includes("status = 'CONFIRMED'")) {
+      const booking = this.db.bookings.find(
+        (item) =>
+          item.showtime_id === params[0] &&
+          item.seat_id === params[1] &&
+          item.status === 'CONFIRMED'
+      );
+      return { rows: booking ? [{ id: booking.id }] : [], rowCount: booking ? 1 : 0 };
+    }
+
     return this.db.query(sql, params);
   }
 
@@ -217,6 +247,14 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
     .post('/auth/login')
     .send({ email: 'user@example.com', password: 'wrong-password' })
     .expect(401);
+  const loginFailedLog = db.auditLogs.find((log) => log.event_type === 'LOGIN_FAILED');
+  assert.ok(loginFailedLog);
+  assert.equal(loginFailedLog.actor_user_id, 1);
+  assert.equal(loginFailedLog.target_type, 'user');
+  assert.equal(loginFailedLog.action, 'LOGIN');
+  assert.equal(loginFailedLog.status, 'FAILED');
+  assert.equal(loginFailedLog.metadata.reason, 'PASSWORD_MISMATCH');
+  assert.equal(JSON.stringify(loginFailedLog.metadata).includes('wrong-password'), false);
 
   const token = login.body.token;
 
@@ -240,6 +278,13 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
   assert.equal(booking.body.booking.status, 'CONFIRMED');
   assert.equal(booking.body.booking.cancelled_at, null);
   assert.equal(booking.body.booking.version, 1);
+  const bookingCreatedLog = db.auditLogs.find((log) => log.event_type === 'BOOKING_CREATED');
+  assert.ok(bookingCreatedLog);
+  assert.equal(bookingCreatedLog.actor_user_id, 1);
+  assert.equal(bookingCreatedLog.target_type, 'booking');
+  assert.equal(bookingCreatedLog.target_id, booking.body.booking.id);
+  assert.equal(bookingCreatedLog.status, 'SUCCESS');
+  assert.equal(bookingCreatedLog.metadata.booking_status, 'CONFIRMED');
 
   const showtimesAfterBooking = await request(app).get('/movies/1/showtimes').expect(200);
   assert.equal(showtimesAfterBooking.body.showtimes[0].booked_seat_count, 1);
@@ -253,6 +298,16 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
     .set('Authorization', `Bearer ${token}`)
     .send({ showtimeId: 1, seatCode: 'A1' })
     .expect(409);
+  const duplicateBookingLog = db.auditLogs.find(
+    (log) => log.event_type === 'DUPLICATE_BOOKING_FAILED'
+  );
+  assert.ok(duplicateBookingLog);
+  assert.equal(duplicateBookingLog.actor_user_id, 1);
+  assert.equal(duplicateBookingLog.target_type, 'seat');
+  assert.equal(duplicateBookingLog.target_id, 1);
+  assert.equal(duplicateBookingLog.action, 'BOOK');
+  assert.equal(duplicateBookingLog.status, 'FAILED');
+  assert.equal(duplicateBookingLog.metadata.reason, 'CONFIRMED_BOOKING_EXISTS');
 
   const otherRegister = await request(app)
     .post('/auth/register')
@@ -280,6 +335,14 @@ test('auth, movie lookup, protected routes, booking, and duplicate booking flow'
   assert.equal(db.bookings[0].status, 'CANCELLED');
   assert.ok(db.bookings[0].cancelled_at);
   assert.equal(db.bookings[0].version, 2);
+  const bookingCancelledLog = db.auditLogs.find((log) => log.event_type === 'BOOKING_CANCELLED');
+  assert.ok(bookingCancelledLog);
+  assert.equal(bookingCancelledLog.actor_user_id, 1);
+  assert.equal(bookingCancelledLog.target_type, 'booking');
+  assert.equal(bookingCancelledLog.target_id, booking.body.booking.id);
+  assert.equal(bookingCancelledLog.status, 'SUCCESS');
+  assert.equal(bookingCancelledLog.metadata.previous_status, 'CONFIRMED');
+  assert.equal(bookingCancelledLog.metadata.new_status, 'CANCELLED');
 
   const cancelledBookings = await request(app)
     .get('/bookings/me')

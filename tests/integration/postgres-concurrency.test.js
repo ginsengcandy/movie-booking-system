@@ -50,6 +50,12 @@ test(
 
     t.after(async () => {
       try {
+        await pool.query(
+          `DELETE FROM audit_logs
+           WHERE metadata->>'showtime_id' = $1
+              OR actor_user_id = ANY($2::bigint[])`,
+          [String(createdIds.showtime), createdIds.users]
+        );
         await pool.query('DELETE FROM bookings WHERE showtime_id = $1', [createdIds.showtime]);
         await pool.query('DELETE FROM seats WHERE id = $1', [createdIds.seat]);
         await pool.query('DELETE FROM showtimes WHERE id = $1', [createdIds.showtime]);
@@ -148,5 +154,16 @@ test(
     );
 
     assert.equal(bookingCount.rows[0].count, 1);
+
+    const duplicateAuditLogCount = await pool.query(
+      `SELECT COUNT(*)::int AS count
+       FROM audit_logs
+       WHERE event_type = 'DUPLICATE_BOOKING_FAILED'
+         AND metadata->>'showtime_id' = $1
+         AND metadata->>'seat_code' = 'A1'`,
+      [String(createdIds.showtime)]
+    );
+
+    assert.equal(duplicateAuditLogCount.rows[0].count, concurrentUserCount - 1);
   }
 );
