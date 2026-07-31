@@ -36,9 +36,17 @@ export function createBookingService(db) {
         const seatId = seatResult.rows[0].seat_id;
 
         const bookingResult = await client.query(
-          `INSERT INTO bookings (user_id, showtime_id, seat_id)
-           VALUES ($1, $2, $3)
-           RETURNING id, user_id, showtime_id, seat_id, created_at`,
+          `INSERT INTO bookings (user_id, showtime_id, seat_id, status)
+           VALUES ($1, $2, $3, 'CONFIRMED')
+           RETURNING id,
+                     user_id,
+                     showtime_id,
+                     seat_id,
+                     status,
+                     created_at,
+                     updated_at,
+                     cancelled_at,
+                     version`,
           [userId, showtimeId, seatId]
         );
 
@@ -57,6 +65,9 @@ export function createBookingService(db) {
       const result = await db.query(
         `SELECT b.id,
                 b.created_at,
+                b.updated_at,
+                b.cancelled_at,
+                b.status,
                 m.id AS movie_id,
                 m.title AS movie_title,
                 st.id AS showtime_id,
@@ -68,6 +79,7 @@ export function createBookingService(db) {
          JOIN movies m ON m.id = st.movie_id
          JOIN seats se ON se.id = b.seat_id
          WHERE b.user_id = $1
+           AND b.status = 'CONFIRMED'
          ORDER BY b.created_at DESC`,
         [userId]
       );
@@ -79,8 +91,14 @@ export function createBookingService(db) {
       if (!parsed.success) throw badRequest('Invalid booking id');
 
       const result = await db.query(
-        `DELETE FROM bookings
-         WHERE id = $1 AND user_id = $2
+        `UPDATE bookings
+         SET status = 'CANCELLED',
+             cancelled_at = now(),
+             updated_at = now(),
+             version = version + 1
+         WHERE id = $1
+           AND user_id = $2
+           AND status = 'CONFIRMED'
          RETURNING id`,
         [parsed.data, userId]
       );
