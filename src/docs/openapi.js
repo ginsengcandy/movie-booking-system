@@ -96,14 +96,7 @@ export const openApiSpec = {
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                  required: ['movies'],
-                  properties: {
-                    movies: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Movie' }
-                    }
-                  }
+                  $ref: '#/components/schemas/MovieListResponse'
                 }
               }
             }
@@ -129,14 +122,7 @@ export const openApiSpec = {
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                  required: ['showtimes'],
-                  properties: {
-                    showtimes: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Showtime' }
-                    }
-                  }
+                  $ref: '#/components/schemas/ShowtimeListResponse'
                 }
               }
             }
@@ -163,14 +149,7 @@ export const openApiSpec = {
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                  required: ['seats'],
-                  properties: {
-                    seats: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Seat' }
-                    }
-                  }
+                  $ref: '#/components/schemas/SeatListResponse'
                 }
               }
             }
@@ -183,6 +162,7 @@ export const openApiSpec = {
       post: {
         tags: ['Bookings'],
         summary: 'Create a booking',
+        description: 'Creates a CONFIRMED booking. Seat codes are normalized to uppercase before lookup.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -198,11 +178,7 @@ export const openApiSpec = {
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                  required: ['booking'],
-                  properties: {
-                    booking: { $ref: '#/components/schemas/CreatedBooking' }
-                  }
+                  $ref: '#/components/schemas/CreateBookingResponse'
                 }
               }
             }
@@ -218,21 +194,15 @@ export const openApiSpec = {
       get: {
         tags: ['Bookings'],
         summary: 'List my bookings',
+        description: 'Returns only CONFIRMED bookings for the authenticated user. Cancelled booking history is retained in the database but is not exposed by this endpoint.',
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
-            description: 'Authenticated user booking list',
+            description: 'Authenticated user confirmed booking list',
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                  required: ['bookings'],
-                  properties: {
-                    bookings: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Booking' }
-                    }
-                  }
+                  $ref: '#/components/schemas/BookingListResponse'
                 }
               }
             }
@@ -245,7 +215,7 @@ export const openApiSpec = {
       delete: {
         tags: ['Bookings'],
         summary: 'Cancel my booking',
-        description: 'Marks a confirmed booking as CANCELLED. The booking row is kept for history.',
+        description: 'Marks a CONFIRMED booking as CANCELLED. The booking row is kept for history, cancelled_at is set, updated_at is refreshed, and version is incremented.',
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -338,6 +308,53 @@ export const openApiSpec = {
           status: { type: 'string', example: 'ok' }
         }
       },
+      MovieListResponse: {
+        type: 'object',
+        required: ['movies'],
+        properties: {
+          movies: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Movie' }
+          }
+        }
+      },
+      ShowtimeListResponse: {
+        type: 'object',
+        required: ['showtimes'],
+        properties: {
+          showtimes: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Showtime' }
+          }
+        }
+      },
+      SeatListResponse: {
+        type: 'object',
+        required: ['seats'],
+        properties: {
+          seats: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Seat' }
+          }
+        }
+      },
+      CreateBookingResponse: {
+        type: 'object',
+        required: ['booking'],
+        properties: {
+          booking: { $ref: '#/components/schemas/CreatedBooking' }
+        }
+      },
+      BookingListResponse: {
+        type: 'object',
+        required: ['bookings'],
+        properties: {
+          bookings: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Booking' }
+          }
+        }
+      },
       RegisterRequest: {
         type: 'object',
         required: ['email', 'password'],
@@ -403,9 +420,17 @@ export const openApiSpec = {
           starts_at: { type: 'string', format: 'date-time', example: '2026-08-01T10:00:00.000Z' },
           auditorium: { type: 'string', example: 'A관' },
           duration_minutes: { type: 'integer', example: 136 },
-          seat_count: { type: 'integer', example: 8 },
-          booked_seat_count: { type: 'integer', example: 3 },
-          remaining_seat_count: { type: 'integer', example: 5 }
+          seat_count: { type: 'integer', description: 'Total seats for this showtime', example: 8 },
+          booked_seat_count: {
+            type: 'integer',
+            description: 'Number of seats with a CONFIRMED booking',
+            example: 3
+          },
+          remaining_seat_count: {
+            type: 'integer',
+            description: 'seat_count minus CONFIRMED bookings',
+            example: 5
+          }
         }
       },
       Seat: {
@@ -413,7 +438,11 @@ export const openApiSpec = {
         required: ['code', 'booked'],
         properties: {
           code: { type: 'string', example: 'A1' },
-          booked: { type: 'boolean', example: false }
+          booked: {
+            type: 'boolean',
+            description: 'True when the seat has a CONFIRMED booking for this showtime',
+            example: false
+          }
         }
       },
       CreateBookingRequest: {
@@ -451,11 +480,16 @@ export const openApiSpec = {
             nullable: true,
             example: null
           },
-          version: { type: 'integer', example: 1 }
+          version: {
+            type: 'integer',
+            description: 'Optimistic version value incremented when the booking is cancelled',
+            example: 1
+          }
         }
       },
       Booking: {
         type: 'object',
+        description: 'Confirmed booking summary returned by GET /bookings/me.',
         required: [
           'id',
           'created_at',
@@ -490,6 +524,7 @@ export const openApiSpec = {
       },
       BookingStatus: {
         type: 'string',
+        description: 'Current booking lifecycle status. Public booking list responses include only CONFIRMED items.',
         enum: ['CONFIRMED', 'CANCELLED'],
         example: 'CONFIRMED'
       },
