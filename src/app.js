@@ -1,7 +1,9 @@
 import express from 'express';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import swaggerUi from 'swagger-ui-express';
 import { pool } from './db/pool.js';
+import { openApiSpec } from './docs/openapi.js';
 import { createAuthService } from './services/auth-service.js';
 import { createMovieService } from './services/movie-service.js';
 import { createBookingService } from './services/booking-service.js';
@@ -17,6 +19,7 @@ export function createApp(db = pool) {
 
   app.use(express.json());
   app.use(express.static(join(__dirname, '..', 'public')));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok' });

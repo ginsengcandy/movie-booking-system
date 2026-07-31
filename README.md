@@ -56,6 +56,8 @@ npm start
 
 브라우저에서 `http://localhost:3000`에 접속하면 프론트엔드 화면으로 회원가입, 로그인, 영화 선택, 상영 시간 선택, 좌석 예매, 내 예매 내역 조회를 확인할 수 있습니다.
 
+Swagger/OpenAPI 문서는 서버 실행 후 `http://localhost:3000/api-docs`에서 확인할 수 있습니다. Bearer JWT가 필요한 예매 API는 회원가입 또는 로그인 응답의 `token` 값을 Swagger UI의 `Authorize` 버튼에 입력해 테스트할 수 있습니다.
+
 프론트엔드 확인 순서:
 
 1. 회원가입 또는 로그인
@@ -86,6 +88,7 @@ npm test
 │   ├── server.js                # 서버 시작점
 │   ├── config/env.js            # 환경 변수 로딩
 │   ├── db/pool.js               # PostgreSQL 커넥션 풀
+│   ├── docs/openapi.js          # Swagger/OpenAPI 스펙
 │   ├── middleware/              # 인증 및 오류 처리
 │   ├── routes/                  # REST API 라우터
 │   ├── services/                # 비즈니스 로직
