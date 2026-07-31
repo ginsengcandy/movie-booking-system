@@ -8,12 +8,13 @@ Node.js와 PostgreSQL로 구현한 영화 티켓 예매 시스템입니다. 회�
 
 - Node.js 20 이상
 - npm 10 이상
-- PostgreSQL 14 이상
+- Docker Desktop 또는 Docker Engine
 
 개발 및 검증에 사용한 버전:
 
 - Node.js v24.11.1
 - npm 11.6.2
+- Docker 29.2.1
 
 ### 환경 변수 설정
 
@@ -23,6 +24,7 @@ Node.js와 PostgreSQL로 구현한 영화 티켓 예매 시스템입니다. 회�
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/movie_booking
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/movie_booking_test
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=1h
 BCRYPT_ROUNDS=10
@@ -32,10 +34,10 @@ BCRYPT_ROUNDS=10
 
 ### 데이터베이스 준비
 
-PostgreSQL에서 데이터베이스를 생성합니다.
+Docker Compose로 PostgreSQL 컨테이너를 실행합니다. 개발 DB(`movie_booking`)와 통합 테스트 DB(`movie_booking_test`)가 같은 PostgreSQL 컨테이너에서 준비됩니다.
 
-```sql
-CREATE DATABASE movie_booking;
+```bash
+npm run db:up
 ```
 
 의존성을 설치하고 스키마와 샘플 데이터를 적용합니다.
@@ -44,6 +46,18 @@ CREATE DATABASE movie_booking;
 npm install
 npm run migrate
 npm run seed
+```
+
+컨테이너를 종료하려면 다음 명령을 사용합니다.
+
+```bash
+npm run db:down
+```
+
+DB 데이터까지 삭제하고 처음부터 다시 초기화해야 하는 경우에만 다음 명령을 사용합니다. 이 명령은 Docker 볼륨의 PostgreSQL 데이터를 삭제합니다.
+
+```bash
+docker compose down -v
 ```
 
 ### 애플리케이션 실행
@@ -76,15 +90,7 @@ npm test
 
 기본 테스트는 빠른 재현성을 위해 인메모리 가짜 DB 어댑터로 API 흐름을 검증합니다. 실제 PostgreSQL 동시성 검증은 별도 통합 테스트로 실행합니다.
 
-PostgreSQL 기반 동시 예매 통합 테스트는 `TEST_DATABASE_URL`이 설정된 경우에만 실행됩니다. 안전을 위해 테스트 데이터베이스 이름에는 `test`가 포함되어야 합니다. `TEST_DATABASE_URL`은 `.env`에 추가하거나 셸 환경 변수로 설정할 수 있습니다.
-
-`.env`에 추가하는 경우:
-
-```bash
-TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/movie_booking_test
-```
-
-그다음 통합 테스트를 실행합니다.
+PostgreSQL 기반 동시 예매 통합 테스트는 `TEST_DATABASE_URL`이 설정된 경우에만 실행됩니다. 안전을 위해 테스트 데이터베이스 이름에는 `test`가 포함되어야 합니다. `.env.example` 기본값을 사용하면 Docker Compose로 생성되는 `movie_booking_test` DB에 연결됩니다.
 
 ```bash
 npm run test:integration
@@ -109,6 +115,8 @@ npm run test:integration
 
 ```text
 .
+├── docker/postgres/init/        # Compose PostgreSQL 초기화 SQL
+├── docker-compose.yml           # 개발/테스트 PostgreSQL 실행 환경
 ├── migrations/                  # PostgreSQL 스키마 및 증분 마이그레이션
 ├── scripts/migrate.js           # 마이그레이션 실행 스크립트
 ├── scripts/seed.js              # 샘플 영화, 상영 회차, 좌석 생성
